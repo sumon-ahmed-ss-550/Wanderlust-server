@@ -24,6 +24,7 @@ const run = async () => {
 
     const db = client.db("wanderlust_data");
     const collection = db.collection("data");
+    const collection2 = db.collection("productData");
 
     // get all data
     app.get("/destination", async (req, res) => {
@@ -81,6 +82,35 @@ const run = async () => {
         _id: new ObjectId(id),
       };
       const result = await collection.deleteOne(query);
+      res.send(result);
+    });
+
+    // get all data user and product
+    app.get("/product", async (req, res) => {
+      const cursor = collection2.find();
+      const allValues = await cursor.toArray();
+      res.send(allValues);
+    });
+
+    // get one data user and product
+    app.get("/product/:userId", async (req, res) => {
+      const userId = req.params.userId;
+      const selectId = collection2.find({ userId });
+      const result = await selectId.toArray();
+      res.send(result);
+    });
+
+    // post data user and product
+    app.post("/product", async (req, res) => {
+      const productData = req.body;
+      const result = await collection2.insertOne(productData);
+      res.send(result);
+    });
+
+    // delete data user and product
+    app.delete("/product/:userId", async (req, res) => {
+      const { userId } = req.params;
+      const result = await collection2.deleteOne({ _id: new ObjectId(userId) });
       res.send(result);
     });
 
