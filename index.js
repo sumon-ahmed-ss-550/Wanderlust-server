@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 const port = process.env.PORT;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 const uri = process.env.MONGODB_URI;
 
 app.use(cors());
@@ -17,6 +18,28 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+
+const verifyToken = async (req, res, next) => {
+  const authToken = req?.headers?.authorization;
+  if (!authToken) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const token = authToken?.split(" ")[1];
+  console.log(token);
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+};
 
 const run = async () => {
   try {
@@ -34,7 +57,7 @@ const run = async () => {
     });
 
     // get one data
-    app.get("/destination/:id", async (req, res) => {
+    app.get("/destination/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = {
         _id: new ObjectId(id),
@@ -44,7 +67,7 @@ const run = async () => {
     });
 
     // post one data
-    app.post("/destination", async (req, res) => {
+    app.post("/destination", verifyToken, async (req, res) => {
       const info = req.body;
       const query = await collection.insertOne(info);
       console.log(query);
@@ -52,7 +75,7 @@ const run = async () => {
     });
 
     // update date
-    app.patch("/destination/:id", async (req, res) => {
+    app.patch("/destination/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = {
         _id: new ObjectId(id),
